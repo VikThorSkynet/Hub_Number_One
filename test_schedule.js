@@ -1,6 +1,23 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {summarizeUpcoming, scheduleGroup} = require('./static/schedule-utils.js');
+const {summarizeUpcoming, summarizeDay, scheduleGroup} = require('./static/schedule-utils.js');
+
+test('daily details remove cohort suffixes and duplicates but preserve manual events and source data', () => {
+  const base = {event_date:'2026-09-04', source:'calendar-2026-2', category:'notas', description:''};
+  const events = [
+    {...base, id:1, title:'Envio de notas e boletins · CH4 TQ (ter/qui)'},
+    {...base, id:2, title:'Envio de notas e boletins · CH1 SQ (seg/qua)'},
+    {...base, id:3, title:'Envio de notas e boletins · GOB2 TQ (ter/qui)'},
+    {...base, id:4, source:'manual', title:'Reunião · equipe', revision:2},
+    {...base, id:5, event_date:'2026-09-05', title:'Outro dia'}
+  ];
+  const rows = summarizeDay(events, '2026-09-04');
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].title, 'Envio de notas e boletins');
+  assert.equal(rows[1].title, 'Reunião · equipe');
+  assert.equal(rows[1].revision, 2);
+  assert.match(events[0].title, /CH4/);
+});
 
 test('upcoming dates combine cohorts without combining weekday groups or losing dates', () => {
   const event = (id, day, group, course) => ({id, event_date:day, source:'calendar-2026-2', category:'prova', title:`Semana de provas · ${course} (${group})`});

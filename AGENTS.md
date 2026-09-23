@@ -41,3 +41,5 @@ O código está na pasta compartilhada `\\servidor\ARQUIVOS\DOCUMENTOS\Coord SEC
 Execute `python -m unittest -v test_app.py`, `node --test test_schedule.js` e `node --check` nos arquivos JavaScript alterados. Para mudanças visuais, confira o hub e a página afetada no navegador em tamanho de computador e celular. Não publicar um aviso de exemplo no banco real: use o banco temporário dos testes. Depois de alterar CSS ou JS, incremente o parâmetro `?v=` correspondente nos HTMLs para evitar cache antigo.
 
 Repositório de destino: `https://github.com/VikThorSkynet/Hub_Number_One.git`.
+
+Os detalhes de cada dia usam títulos simples (ex.: Semana de provas), sem turma, horário ou siglas, e agrupam eventos importados iguais por categoria/título. Os dados originais permanecem no banco. Eventos manuais continuam separados e editáveis. O resumo Próximos 7 dias mantém S/Q e T/Q, conforme solicitado anteriormente.
