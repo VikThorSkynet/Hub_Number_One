@@ -93,4 +93,58 @@ class NoticeTests(unittest.TestCase):
             html=response.get_data(as_text=True)
             self.assertLess(html.index('hub-calendar'),html.index('Ferramentas da equipe'))
 
+class CalendarAndClassTests(unittest.TestCase):
+    def test_calendar_distinguishes_weekday_groups_and_preserves_manual_event(self):
+        from openpyxl.styles import PatternFill
+        book=Workbook();first=book.active;first.title='CH1 - SQ 1715'
+        second=book.create_sheet('GOB 2 - TQ 0930')
+        for sheet in [first,second]:
+            sheet['B3']='AUGUST';sheet['I3']='SEPTEMBER';sheet['P3']='OCTOBER'
+            sheet['K5']='2 2A';sheet['K5'].fill=PatternFill(fill_type='solid',fgColor='FFCCFFFF')
+        buf=io.BytesIO();book.save(buf)
+        parsed=app.parse_calendar_workbook(buf.getvalue())
+        same_day=[r for r in parsed if r[1]=='2026-09-02']
+        self.assertEqual(len(same_day),2)
+        self.assertTrue(any('seg/qua' in row[2] for row in same_day))
+        self.assertTrue(any('ter/qui' in row[2] for row in same_day))
+        self.assertEqual(app.parse_calendar_workbook(self.empty_book()),[])
+        client=app.app.test_client()
+        manual=client.post('/api/events',json={'event_date':'2026-09-23','title':'Reunião','category':'outro','description':''})
+        self.assertEqual(manual.status_code,201)
+        eid=manual.json['id']
+        response=client.post('/api/events/import',data={'file':(io.BytesIO(buf.getvalue()),'calendario.xlsx')})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json['imported'],4)
+        self.assertEqual(len(client.get('/api/events?from=2026-09-23&to=2026-09-29').json),1)
+        self.assertEqual(client.get('/api/events?from=2026-09-02&to=2026-09-02').status_code,200)
+        self.assertEqual(len(client.get('/api/events?from=2026-09-02&to=2026-09-02').json),2)
+        self.assertEqual(client.post('/api/events/import',data={'file':(io.BytesIO(buf.getvalue()),'calendario.xlsx')}).json['imported'],4)
+        self.assertEqual(len(client.get('/api/events').json),5)
+        saved=next(e for e in client.get('/api/events').json if e['id']==eid)
+        self.assertEqual(client.put('/api/events/'+str(eid),json={**saved,'title':'Nova reunião'}).status_code,200)
+        self.assertEqual(client.put('/api/events/'+str(eid),json={**saved,'title':'Conflito'}).status_code,409)
+        self.assertEqual(client.delete('/api/events/'+str(eid)).status_code,200)
+        self.assertEqual(client.get('/api/events?from=bad').status_code,400)
+
+    @staticmethod
+    def empty_book():
+        book=Workbook();buf=io.BytesIO();book.save(buf);return buf.getvalue()
+
+    def test_class_schedule_and_map_image(self):
+        client=app.app.test_client()
+        item={'weekday':1,'room':2,'start_time':'17:15','course':'GOB2','students':9,'teacher':''}
+        created=client.post('/api/classes',json=item)
+        self.assertEqual(created.status_code,201)
+        cid=created.json['id']
+        self.assertEqual(client.post('/api/classes',json=item).status_code,409)
+        saved=next(c for c in client.get('/api/classes').json if c['id']==cid)
+        self.assertEqual(client.put('/api/classes/'+str(cid),json={**saved,'teacher':'Professora A'}).status_code,200)
+        self.assertEqual(client.put('/api/classes/'+str(cid),json=saved).status_code,409)
+        self.assertEqual(client.post('/api/classes',json={**item,'room':10}).status_code,400)
+        self.assertEqual(client.post('/api/class-map/image',data={'file':(io.BytesIO(b'bad'),'mapa.png')}).status_code,400)
+        self.assertEqual(client.post('/api/class-map/image',data={'file':(io.BytesIO(b'\x89PNG\r\n\x1a\nsmall'),'mapa.png')}).status_code,200)
+        self.assertEqual(client.get('/api/class-map/image').status_code,200)
+        self.assertEqual(client.delete('/api/classes/'+str(cid)).status_code,200)
+        self.assertEqual(client.delete('/api/classes/'+str(cid)).status_code,404)
+
 if __name__=='__main__':unittest.main()

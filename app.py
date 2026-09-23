@@ -6,9 +6,9 @@ import re
 import sqlite3
 import unicodedata
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 from urllib.parse import urlsplit
-from flask import Flask, request, jsonify, send_from_directory, abort
+from flask import Flask, request, jsonify, send_from_directory, abort, send_file
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parent
@@ -60,6 +60,9 @@ def init():
         CREATE TABLE IF NOT EXISTS imports(id INTEGER PRIMARY KEY, source TEXT, filename TEXT, created TEXT, added INTEGER, updated INTEGER, skipped INTEGER);
         CREATE TABLE IF NOT EXISTS hub_links(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, url TEXT NOT NULL, description TEXT NOT NULL DEFAULT '');
         CREATE TABLE IF NOT EXISTS hub_notices(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, body TEXT NOT NULL, color TEXT NOT NULL, seconds INTEGER NOT NULL, revision INTEGER NOT NULL DEFAULT 1);
+        CREATE TABLE IF NOT EXISTS hub_events(id INTEGER PRIMARY KEY AUTOINCREMENT, event_date TEXT NOT NULL, title TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT 'manual', source_key TEXT UNIQUE, revision INTEGER NOT NULL DEFAULT 1);
+        CREATE INDEX IF NOT EXISTS idx_hub_events_date ON hub_events(event_date);
+        CREATE TABLE IF NOT EXISTS hub_classes(id INTEGER PRIMARY KEY AUTOINCREMENT, weekday INTEGER NOT NULL, room INTEGER NOT NULL, start_time TEXT NOT NULL, course TEXT NOT NULL, students INTEGER, teacher TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 1, UNIQUE(weekday,room,start_time));
         ''')
 
 def prepare(d):
@@ -178,6 +181,181 @@ def calculator(): return send_from_directory(app.static_folder,'calculadora.html
 
 @app.get('/links')
 def links_page(): return send_from_directory(app.static_folder,'links.html')
+
+@app.get('/calendario')
+def calendar_page(): return send_from_directory(app.static_folder,'calendario.html')
+
+@app.get('/mapa-de-turmas')
+def classes_page(): return send_from_directory(app.static_folder,'turmas.html')
+
+EVENT_CATEGORIES = {'prova','notas','feriado','aulas','segunda_chamada','projeto','sexta_letiva','encerramento','outro'}
+SHEET_COLORS = {
+    'FFCCFFFF': ('prova','Semana de provas'),
+    'FFFFFF9B': ('notas','Envio de notas e boletins'),
+    'FFCC66FF': ('sexta_letiva','Sexta letiva'),
+    'FFFF99FF': ('aulas','Início das aulas'),
+    'FF7F7F7F': ('feriado','Feriado ou recesso'),
+    'FFBFBFBF': ('feriado','Feriado ou recesso'),
+    'FF92D050': ('segunda_chamada','2ª chamada de provas'),
+    'FFFBCDA7': ('projeto','Book Project Week'),
+}
+
+def valid_date(value):
+    if not isinstance(value,str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}',value): return False
+    try: date.fromisoformat(value)
+    except ValueError: return False
+    return True
+
+def event_payload(data):
+    if not isinstance(data,dict): return None
+    event_date,title,category,description=[data.get(k,'') for k in ('event_date','title','category','description')]
+    if not valid_date(event_date) or not isinstance(title,str) or not 1<=len(title.strip())<=120 or not isinstance(category,str) or category not in EVENT_CATEGORIES or not isinstance(description,str) or len(description)>500: return None
+    return event_date,title.strip(),category,description.strip()
+
+@app.get('/api/events')
+def list_events():
+    start,end=request.args.get('from'),request.args.get('to')
+    if (start and not valid_date(start)) or (end and not valid_date(end)) or (start and end and start>end): return jsonify(error='Período inválido.'),400
+    clauses=[]; params=[]
+    if start: clauses.append('event_date>=?');params.append(start)
+    if end: clauses.append('event_date<=?');params.append(end)
+    query='SELECT * FROM hub_events'+(' WHERE '+' AND '.join(clauses) if clauses else '')+' ORDER BY event_date,id'
+    with db() as c: return jsonify([dict(row) for row in c.execute(query,params)])
+
+@app.post('/api/events')
+def add_event():
+    values=event_payload(request.get_json(silent=True))
+    if not values: return jsonify(error='Informe data, título e categoria válidos.'),400
+    with db() as c: eid=c.execute('INSERT INTO hub_events(event_date,title,category,description) VALUES(?,?,?,?)',values).lastrowid
+    return jsonify(id=eid),201
+
+@app.put('/api/events/<int:eid>')
+def edit_event(eid):
+    data=request.get_json(silent=True); values=event_payload(data)
+    if not values: return jsonify(error='Informe data, título e categoria válidos.'),400
+    with db() as c:
+        row=c.execute('SELECT revision,source FROM hub_events WHERE id=?',(eid,)).fetchone()
+        if not row: return jsonify(error='Data não encontrada.'),404
+        if row['source']!='manual': return jsonify(error='Datas importadas são atualizadas pela planilha. Crie uma data manual para ajustes.'),409
+        if data.get('revision')!=row['revision']: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
+        if not c.execute('UPDATE hub_events SET event_date=?,title=?,category=?,description=?,revision=revision+1 WHERE id=? AND revision=?',(*values,eid,data['revision'])).rowcount: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
+    return jsonify(ok=True)
+
+@app.delete('/api/events/<int:eid>')
+def delete_event(eid):
+    with db() as c:
+        row=c.execute('SELECT source FROM hub_events WHERE id=?',(eid,)).fetchone()
+        if not row: return jsonify(error='Data não encontrada.'),404
+        if row['source']!='manual': return jsonify(error='Datas importadas são atualizadas pela planilha.'),409
+        c.execute('DELETE FROM hub_events WHERE id=?',(eid,))
+    return jsonify(ok=True)
+
+def parse_calendar_workbook(content):
+    workbook=load_workbook(io.BytesIO(content),read_only=False,data_only=True)
+    if len(workbook.worksheets)>20: raise ValueError('Muitas abas na planilha.')
+    events={}
+    for sheet in workbook:
+        if sheet.max_row>1000 or sheet.max_column>100: raise ValueError('Planilha maior que o formato esperado.')
+        if str(sheet['B3'].value or '').strip().upper()!='AUGUST' or str(sheet['I3'].value or '').strip().upper()!='SEPTEMBER' or str(sheet['P3'].value or '').strip().upper()!='OCTOBER': continue
+        for month,columns,rows in ((8,range(2,8),range(5,11)),(9,range(9,15),range(5,11)),(10,range(16,22),range(5,11)),(11,range(2,8),range(14,20)),(12,range(9,15),range(14,20))):
+            for row in rows:
+                for col in columns:
+                    cell=sheet.cell(row,col); color=cell.fill.fgColor
+                    if color.type!='rgb': continue
+                    found=SHEET_COLORS.get(color.rgb.upper() if isinstance(color.rgb,str) else '')
+                    if not found: continue
+                    value=str(int(cell.value)) if isinstance(cell.value,(int,float)) and not isinstance(cell.value,bool) and cell.value==int(cell.value) else str(cell.value or '').strip()
+                    match=re.match(r'^\s*(\d{1,2})(?:\b|$)',value)
+                    if not match: continue
+                    try: event_date=date(2026,month,int(match.group(1))).isoformat()
+                    except ValueError: continue
+                    category,title=found;key=(sheet.title,event_date,category)
+                    detail=value[len(match.group(1)):].strip()
+                    weekday_group='seg/qua' if re.search(r'\bSQ\b',sheet.title,re.I) else 'ter/qui' if re.search(r'\bTQ\b',sheet.title,re.I) else sheet.title
+                    if key not in events: events[key]=dict(event_date=event_date,title=f'{title} · {sheet.title} ({weekday_group})',category=category,details=set(),sheet=sheet.title)
+                    if detail: events[key]['details'].add(detail)
+    if not events:
+        workbook.close()
+        return []
+    for day,title in [('2026-12-15','Fim das aulas — turmas de terça e quinta'),('2026-12-16','Fim das aulas — turmas de segunda e quarta')]:
+        events[('encerramento',day,'encerramento')]=dict(event_date=day,title=title,category='encerramento',details=set(),sheet='encerramento')
+    workbook.close()
+    return [(f'calendar-2026-2:{sheet}:{day}:{category}',day,item['title'],category,' · '.join(sorted(item['details']))[:500]) for (sheet,day,category),item in sorted(events.items())]
+
+@app.post('/api/events/import')
+def import_events():
+    file=request.files.get('file')
+    if not file or not file.filename.lower().endswith('.xlsx'): return jsonify(error='Selecione a planilha XLSX do calendário 2026.2.'),400
+    try: rows=parse_calendar_workbook(file.read())
+    except Exception:
+        app.logger.exception('Falha ao ler calendário')
+        return jsonify(error='Não foi possível ler essa planilha.'),400
+    if not rows: return jsonify(error='Nenhuma data importante foi encontrada.'),400
+    with db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        c.execute("DELETE FROM hub_events WHERE source='calendar-2026-2'")
+        c.executemany("INSERT INTO hub_events(source_key,event_date,title,category,description,source) VALUES(?,?,?,?,?,'calendar-2026-2')",rows)
+    return jsonify(imported=len(rows))
+
+def class_payload(data):
+    if not isinstance(data,dict): return None
+    weekday,room,start_time,course,students,teacher=[data.get(k) for k in ('weekday','room','start_time','course','students','teacher')]
+    if type(weekday) is not int or weekday not in (0,1,2,3,4,5) or type(room) is not int or not 1<=room<=9 or not isinstance(start_time,str) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d',start_time) or not isinstance(course,str) or not 1<=len(course.strip())<=80 or students is not None and (type(students) is not int or not 0<=students<=100) or not isinstance(teacher,str) or len(teacher)>80: return None
+    return weekday,room,start_time,course.strip(),students,teacher.strip()
+
+@app.get('/api/classes')
+def list_classes():
+    with db() as c: return jsonify([dict(row) for row in c.execute('SELECT * FROM hub_classes ORDER BY weekday,start_time,room')])
+
+@app.post('/api/classes')
+def add_class():
+    values=class_payload(request.get_json(silent=True))
+    if not values: return jsonify(error='Informe dia, sala, horário e turma válidos.'),400
+    try:
+        with db() as c: cid=c.execute('INSERT INTO hub_classes(weekday,room,start_time,course,students,teacher) VALUES(?,?,?,?,?,?)',values).lastrowid
+    except sqlite3.IntegrityError: return jsonify(error='Já existe uma turma nesta sala e horário.'),409
+    return jsonify(id=cid),201
+
+@app.put('/api/classes/<int:cid>')
+def edit_class(cid):
+    data=request.get_json(silent=True);values=class_payload(data)
+    if not values: return jsonify(error='Informe dia, sala, horário e turma válidos.'),400
+    try:
+        with db() as c:
+            row=c.execute('SELECT revision FROM hub_classes WHERE id=?',(cid,)).fetchone()
+            if not row: return jsonify(error='Turma não encontrada.'),404
+            if data.get('revision')!=row['revision']: return jsonify(error='Esta turma foi alterada. Atualize a página.'),409
+            if not c.execute('UPDATE hub_classes SET weekday=?,room=?,start_time=?,course=?,students=?,teacher=?,revision=revision+1 WHERE id=? AND revision=?',(*values,cid,data['revision'])).rowcount: return jsonify(error='Esta turma foi alterada. Atualize a página.'),409
+    except sqlite3.IntegrityError: return jsonify(error='Já existe uma turma nesta sala e horário.'),409
+    return jsonify(ok=True)
+
+@app.delete('/api/classes/<int:cid>')
+def delete_class(cid):
+    with db() as c:
+        if not c.execute('DELETE FROM hub_classes WHERE id=?',(cid,)).rowcount: return jsonify(error='Turma não encontrada.'),404
+    return jsonify(ok=True)
+
+@app.get('/api/class-map/image')
+def class_map_image():
+    for ext,mime in (('png','image/png'),('jpg','image/jpeg'),('webp','image/webp')):
+        path=DATA/('class-map.'+ext)
+        if path.exists(): return send_file(path,mimetype=mime,conditional=True)
+    abort(404)
+
+@app.post('/api/class-map/image')
+def upload_class_map_image():
+    file=request.files.get('file')
+    if not file: return jsonify(error='Selecione uma imagem PNG, JPG ou WebP.'),400
+    content=file.read()
+    if content.startswith(b'\x89PNG\r\n\x1a\n'): ext='png'
+    elif content.startswith(b'\xff\xd8\xff'): ext='jpg'
+    elif content.startswith(b'RIFF') and content[8:12]==b'WEBP': ext='webp'
+    else: return jsonify(error='Imagem inválida. Use PNG, JPG ou WebP.'),400
+    target=DATA/('class-map.'+ext);temporary=DATA/'class-map.upload'
+    temporary.write_bytes(content);temporary.replace(target)
+    for other in ('png','jpg','webp'):
+        if other!=ext: (DATA/('class-map.'+other)).unlink(missing_ok=True)
+    return jsonify(ok=True)
 
 @app.get('/api/links')
 def list_links():

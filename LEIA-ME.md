@@ -34,10 +34,19 @@ A página inicial agora é o hub. Reinicie o processo do servidor para carregar 
 - `/calculadora`: calculadora reformulada com a identidade Number One. Mantém multa de 2%, juros de (multa / 30) por dia, reemissão de R$ 2,88 e acréscimo de 1% no valor PIX. A reemissão se aplica mesmo sem atraso, como no original. Datas inválidas, valores negativos e entradas incompletas são rejeitados; pagamentos antecipados mostram zero dias de atraso.
 - `/links`: cadastro de legenda, endereço HTTP/HTTPS e descrição opcional; busca e exclusão com confirmação. Os links são gravados no mesmo SQLite do servidor e incluídos no backup da agenda. Qualquer pessoa com acesso ao hub pode adicionar e excluir atalhos. As permissões dos documentos do Google continuam sendo controladas pelo Google.
 
-O calendário é de consulta, sem cadastro de eventos. O arquivo original da calculadora na Área de Trabalho permanece preservado; a versão integrada está em `static/calculadora.html`.
+O calendário permite consultar e cadastrar eventos. O arquivo original da calculadora na Área de Trabalho permanece preservado; a versão integrada está em `static/calculadora.html`.
 
 ## Avisos da escola
 
 Em `/avisos`, a prévia vazia fica acima do editor de título e texto. É possível escolher roxo, azul, coral ou amarelo e definir de 5 a 60 segundos de exibição por card (8 por padrão). Publicar, editar e excluir afetam o hub compartilhado. Os avisos são persistidos no banco e incluídos no backup existente.
 
 O hub alterna entre as boas-vindas e os avisos em ordem de criação. As telas abertas consultam atualizações a cada 30 segundos. A rotação é contínua e automática, sem botões. O calendário fica sempre logo abaixo desse espaço e acima das ferramentas.
+
+
+## Datas importantes e mapa de turmas
+
+O hub mostra o calendário e **Próximos 7 dias** lado a lado em telas maiores; em celular aparecem um abaixo do outro. Os próximos dias incluem hoje e os seis dias seguintes. Clique num dia para abrir `/calendario`, conferir detalhes, criar eventos manuais e, se necessário, atualizar as datas importadas com o arquivo XLSX do calendário 2026.2.
+
+A importação lê as três abas e as cores da legenda. Cada turma/aba permanece identificada, distinguindo segunda e quarta de terça e quinta. A nova importação substitui somente eventos dessa planilha; os eventos criados manualmente permanecem. As datas de encerramento de 15/12 (terça/quinta) e 16/12 (segunda/quarta) vêm das observações do arquivo. Eventos comemorativos citados sem dia específico na legenda não são inventados. A planilha original permanece no Drive e o servidor não sincroniza automaticamente com ela; para atualizar, baixe a versão XLSX e use o botão de importação.
+
+Em `/mapa-de-turmas`, é possível filtrar por dia, sala, horário, turma e professor, criar/editar/excluir turmas e ampliar a imagem original. O mapa fornecido foi transcrito como ponto inicial; o campo professor fica vazio porque a imagem não vincula professores às turmas. Enviar uma imagem substitui apenas o mapa visual; ajuste também os registros editáveis conforme necessário. A imagem fica no diretório local de dados do servidor, fora do Git, e entra no backup apenas se for copiada separadamente. O backup SQLite inclui as turmas e as datas.

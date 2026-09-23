@@ -4,7 +4,7 @@ Este arquivo registra o contexto necessário para continuar o projeto em futuras
 
 ## Objetivo e estado atual
 
-Hub interno da equipe da escola Number One Lagoa Santa, em português. O projeto começou como agenda telefônica e agora reúne agenda, calculadora de multa, links compartilhados, calendário de consulta e avisos rotativos. A identidade visual segue a agenda existente: roxo `#3c2878`, azul `#00a1df`, coral `#e84658` e amarelo `#ffc800`, com o logotipo em `static/number-one.svg`.
+Hub interno da equipe da escola Number One Lagoa Santa, em português. O projeto começou como agenda telefônica e agora reúne agenda, calculadora de multa, links compartilhados, calendário de datas importantes, mapa de turmas e avisos rotativos. A identidade visual segue a agenda existente: roxo `#3c2878`, azul `#00a1df`, coral `#e84658` e amarelo `#ffc800`, com o logotipo em `static/number-one.svg`.
 
 ## Estrutura
 
@@ -14,11 +14,15 @@ Hub interno da equipe da escola Number One Lagoa Santa, em português. O projeto
 - `static/calculadora.html` e `calculator.js`: calculadora integrada ao visual do hub.
 - `static/links.html` e `links.js`: cadastro e consulta dos links da equipe.
 - `static/avisos.html` e `notices.js`: editor com prévia imediata dos cards de aviso.
+- `static/calendar.js`, `calendario.html` e `calendario.js`: datas no calendário e editor/importação do XLSX.
+- `static/turmas.html` e `turmas.js`: mapa consultável e manutenção de turmas.
 - `test_app.py`: testes do servidor com banco temporário. `LEIA-ME.md` contém as instruções de uso; `GUIA-PARA-RODAR-NO-SERVIDOR.md` descreve a instalação no computador servidor.
 
 ## Rotas e comportamento
 
 - `/`: boas-vindas e avisos no mesmo espaço, calendário logo abaixo, ferramentas e links rápidos. Avisos publicados passam automaticamente em ciclo contínuo, sem botões. Cada card respeita o tempo configurado de 5 a 60 segundos; a mensagem de boas-vindas dura 8 segundos. A página consulta mudanças de avisos a cada 30 segundos.
+- `/calendario`: datas importantes e importação do calendário 2026.2. A importação mantém eventos separados por aba/turma e dia da semana; reimportação substitui somente datas dessa planilha. O hub mostra calendário e próximos 7 dias em metades iguais.
+- `/mapa-de-turmas`: horários transcritos da imagem, filtros e manutenção. A imagem original fica no disco local de dados e pode ser substituída; professor é opcional porque não há vínculo por turma no original.
 - `/lista-telefonica`: agenda. API em `/api/contacts`, importação em `/api/import` e backup em `/api/backup`.
 - `/calculadora`: preserva as regras do arquivo original fornecido pelo usuário: multa de 2% após vencimento, juros diários de `(multa / 30) × dias`, reemissão de R$ 2,88 e valor PIX com acréscimo de 1% sobre o total. A reemissão também se aplica sem atraso.
 - `/links`: criar e excluir atalhos com legenda, URL HTTP/HTTPS e descrição opcional. Dados compartilhados em `/api/links`.
@@ -26,7 +30,7 @@ Hub interno da equipe da escola Number One Lagoa Santa, em português. O projeto
 
 ## Dados, privacidade e operação
 
-O banco fica **no disco local do computador que executa o servidor**, em `%LOCALAPPDATA%\AgendaTelefonica\agenda.sqlite3` ou na pasta definida por `AGENDA_DATA`. Não abrir SQLite na pasta de rede. As tabelas `contacts`, `records`, `imports`, `hub_links` e `hub_notices` são criadas com `CREATE TABLE IF NOT EXISTS`; novas versões devem preservar os dados existentes. O backup da agenda copia o banco inteiro, incluindo links e avisos.
+O banco fica **no disco local do computador que executa o servidor**, em `%LOCALAPPDATA%\AgendaTelefonica\agenda.sqlite3` ou na pasta definida por `AGENDA_DATA`. Não abrir SQLite na pasta de rede. As tabelas `contacts`, `records`, `imports`, `hub_links`, `hub_notices`, `hub_events` e `hub_classes` são criadas com `CREATE TABLE IF NOT EXISTS`; novas versões devem preservar os dados existentes. O backup da agenda copia o banco inteiro, incluindo links, avisos, datas e turmas. A imagem do mapa fica no mesmo diretório local, mas precisa de cópia separada no backup.
 
 `contacts.csv` contém contatos reais e fica fora do Git. Bancos, backups, logs, arquivos de ambiente e credenciais também não devem ser versionados. Nunca inserir dados reais de contatos nos testes ou exemplos. Os testes usam diretório temporário. O hub não tem login e deve ficar somente na rede interna; qualquer pessoa com acesso pode editar dados, links e avisos.
 
