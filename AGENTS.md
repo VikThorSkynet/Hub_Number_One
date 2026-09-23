@@ -21,8 +21,8 @@ Hub interno da equipe da escola Number One Lagoa Santa, em português. O projeto
 ## Rotas e comportamento
 
 - `/`: boas-vindas e avisos no mesmo espaço, calendário logo abaixo, ferramentas e links rápidos. Avisos publicados passam automaticamente em ciclo contínuo, sem botões. Cada card respeita o tempo configurado de 5 a 60 segundos; a mensagem de boas-vindas dura 8 segundos. A página consulta mudanças de avisos a cada 30 segundos.
-- `/calendario`: datas importantes e importação do calendário 2026.2. A importação mantém eventos separados por aba/turma e dia da semana; reimportação substitui somente datas dessa planilha. O hub mostra calendário e próximos 7 dias em metades iguais.
-- `/mapa-de-turmas`: horários transcritos da imagem, filtros e manutenção. A imagem original fica no disco local de dados e pode ser substituída; professor é opcional porque não há vínculo por turma no original.
+- `/calendario`: datas importantes e importação do calendário 2026.2. A importação mantém eventos separados por aba/turma e dia da semana; reimportação substitui somente datas dessa planilha. O hub mostra calendário e próximos 7 dias em metades iguais. Somente `calendar.js` controla o calendário; `hub.js` cuida dos links rápidos. O resumo dos próximos dias agrupa eventos importados por tipo e S/Q ou T/Q, sem nomes das turmas e sem repetição por aba, preservando as datas exatas. `schedule-utils.js` contém essas regras de apresentação.
+- `/mapa-de-turmas`: grade compacta de salas (linhas) por horários ocupados (colunas), separada em S/Q (segunda e quarta) e T/Q (terça e quinta), com filtros e edição ao clicar na turma. No banco, `weekday=0` representa S/Q e `weekday=1` representa T/Q; os registros não devem ser duplicados para quarta/quinta. Valores legados 2/3 são exibidos no grupo correspondente. O cadastro também admite sexta e sábado. A imagem de referência tem 09:10 para S/Q e 09:30 para T/Q; respeitar essa diferença. A imagem original fica no disco local de dados e pode ser substituída; professor é opcional porque não há vínculo por turma no original.
 - `/lista-telefonica`: agenda. API em `/api/contacts`, importação em `/api/import` e backup em `/api/backup`.
 - `/calculadora`: preserva as regras do arquivo original fornecido pelo usuário: multa de 2% após vencimento, juros diários de `(multa / 30) × dias`, reemissão de R$ 2,88 e valor PIX com acréscimo de 1% sobre o total. A reemissão também se aplica sem atraso.
 - `/links`: criar e excluir atalhos com legenda, URL HTTP/HTTPS e descrição opcional. Dados compartilhados em `/api/links`.
@@ -38,6 +38,6 @@ O código está na pasta compartilhada `\\servidor\ARQUIVOS\DOCUMENTOS\Coord SEC
 
 ## Verificação antes de publicar
 
-Execute `python -m unittest -v test_app.py` e `node --check` nos arquivos JavaScript alterados. Para mudanças visuais, confira o hub e a página afetada no navegador em tamanho de computador e celular. Não publicar um aviso de exemplo no banco real: use o banco temporário dos testes. Depois de alterar CSS ou JS, incremente o parâmetro `?v=` correspondente nos HTMLs para evitar cache antigo.
+Execute `python -m unittest -v test_app.py`, `node --test test_schedule.js` e `node --check` nos arquivos JavaScript alterados. Para mudanças visuais, confira o hub e a página afetada no navegador em tamanho de computador e celular. Não publicar um aviso de exemplo no banco real: use o banco temporário dos testes. Depois de alterar CSS ou JS, incremente o parâmetro `?v=` correspondente nos HTMLs para evitar cache antigo.
 
 Repositório de destino: `https://github.com/VikThorSkynet/Hub_Number_One.git`.

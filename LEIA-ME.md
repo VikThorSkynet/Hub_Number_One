@@ -50,3 +50,9 @@ O hub mostra o calendário e **Próximos 7 dias** lado a lado em telas maiores; 
 A importação lê as três abas e as cores da legenda. Cada turma/aba permanece identificada, distinguindo segunda e quarta de terça e quinta. A nova importação substitui somente eventos dessa planilha; os eventos criados manualmente permanecem. As datas de encerramento de 15/12 (terça/quinta) e 16/12 (segunda/quarta) vêm das observações do arquivo. Eventos comemorativos citados sem dia específico na legenda não são inventados. A planilha original permanece no Drive e o servidor não sincroniza automaticamente com ela; para atualizar, baixe a versão XLSX e use o botão de importação.
 
 Em `/mapa-de-turmas`, é possível filtrar por dia, sala, horário, turma e professor, criar/editar/excluir turmas e ampliar a imagem original. O mapa fornecido foi transcrito como ponto inicial; o campo professor fica vazio porque a imagem não vincula professores às turmas. Enviar uma imagem substitui apenas o mapa visual; ajuste também os registros editáveis conforme necessário. A imagem fica no diretório local de dados do servidor, fora do Git, e entra no backup apenas se for copiada separadamente. O backup SQLite inclui as turmas e as datas.
+
+### Consulta resumida
+
+O calendário inicial usa a mesma navegação da página de datas: as setas mudam o mês e clicar no dia abre os detalhes. “Próximos 7 dias” agrupa as marcações importadas por evento e S/Q ou T/Q, mostrando as datas exatas sem repetir nomes de turmas. Eventos manuais mantêm seu título.
+
+O mapa apresenta uma grade por grupo: **S/Q = segunda e quarta**; **T/Q = terça e quinta**. As salas ficam nas linhas e os horários ocupados nas colunas. Clique na turma para editar ou excluir. No celular, deslize a grade horizontalmente. O mapa original está disponível na seção recolhida abaixo das grades.
