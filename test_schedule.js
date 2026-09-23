@@ -47,3 +47,12 @@ test('manual events keep titles and separate entries; end-of-term group is abbre
 test('paired weekdays share a schedule group, Friday and Saturday remain independent', () => {
   assert.deepEqual([0,1,2,3,4,5].map(scheduleGroup), [0,1,0,1,4,5]);
 });
+
+test('periods appear on each inclusive day and are clipped to the upcoming window', () => {
+  const events = [{id:90, event_date:'2027-01-30', end_date:'2027-02-04', title:'Semana de provas', category:'prova', source:'manual'}];
+  assert.equal(summarizeDay(events, '2027-01-29').length, 0);
+  assert.equal(summarizeDay(events, '2027-01-30').length, 1);
+  assert.equal(summarizeDay(events, '2027-02-04').length, 1);
+  assert.equal(summarizeDay(events, '2027-02-05').length, 0);
+  assert.deepEqual(summarizeUpcoming(events, '2027-02-01', '2027-02-03')[0].dates, ['2027-02-01','2027-02-02','2027-02-03']);
+});

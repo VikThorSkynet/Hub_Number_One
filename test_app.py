@@ -94,6 +94,22 @@ class NoticeTests(unittest.TestCase):
             self.assertLess(html.index('hub-calendar'),html.index('Ferramentas da equipe'))
 
 class CalendarAndClassTests(unittest.TestCase):
+    def test_event_period(self):
+        client=app.app.test_client()
+        item={'event_date':'2027-01-30','end_date':'2027-02-03','title':'Semana de provas','category':'prova','description':''}
+        self.assertEqual(client.post('/api/events',json={**item,'end_date':'2027-01-29'}).status_code,400)
+        self.assertEqual(client.post('/api/events',json={**item,'end_date':'2027-02-30'}).status_code,400)
+        response=client.post('/api/events',json=item)
+        self.assertEqual(response.status_code,201)
+        eid=response.json['id']
+        rows=client.get('/api/events?from=2027-02-01&to=2027-02-02').json
+        saved=next(row for row in rows if row['id']==eid)
+        self.assertEqual(saved['end_date'],'2027-02-03')
+        self.assertFalse(any(row['id']==eid for row in client.get('/api/events?from=2027-02-04').json))
+        self.assertEqual(client.put('/api/events/'+str(eid),json={**saved,'end_date':'2027-02-05'}).status_code,200)
+        self.assertEqual(client.put('/api/events/'+str(eid),json=saved).status_code,409)
+        self.assertEqual(client.delete('/api/events/'+str(eid)).status_code,200)
+
     def test_calendar_distinguishes_weekday_groups_and_preserves_manual_event(self):
         from openpyxl.styles import PatternFill
         book=Workbook();first=book.active;first.title='CH1 - SQ 1715'

@@ -64,6 +64,8 @@ def init():
         CREATE INDEX IF NOT EXISTS idx_hub_events_date ON hub_events(event_date);
         CREATE TABLE IF NOT EXISTS hub_classes(id INTEGER PRIMARY KEY AUTOINCREMENT, weekday INTEGER NOT NULL, room INTEGER NOT NULL, start_time TEXT NOT NULL, course TEXT NOT NULL, students INTEGER, teacher TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 1, UNIQUE(weekday,room,start_time));
         ''')
+        if 'end_date' not in {row['name'] for row in c.execute('PRAGMA table_info(hub_events)')}:
+            c.execute('ALTER TABLE hub_events ADD COLUMN end_date TEXT')
 
 def prepare(d):
     out = {k: str(d.get(k, '') or '').strip() for k in ('name','company','title','department','notes','emails')}
@@ -210,14 +212,16 @@ def event_payload(data):
     if not isinstance(data,dict): return None
     event_date,title,category,description=[data.get(k,'') for k in ('event_date','title','category','description')]
     if not valid_date(event_date) or not isinstance(title,str) or not 1<=len(title.strip())<=120 or not isinstance(category,str) or category not in EVENT_CATEGORIES or not isinstance(description,str) or len(description)>500: return None
-    return event_date,title.strip(),category,description.strip()
+    end_date=data.get('end_date') or event_date
+    if not valid_date(end_date) or end_date<event_date: return None
+    return event_date,title.strip(),category,description.strip(),end_date
 
 @app.get('/api/events')
 def list_events():
     start,end=request.args.get('from'),request.args.get('to')
     if (start and not valid_date(start)) or (end and not valid_date(end)) or (start and end and start>end): return jsonify(error='Período inválido.'),400
     clauses=[]; params=[]
-    if start: clauses.append('event_date>=?');params.append(start)
+    if start: clauses.append('COALESCE(end_date,event_date)>=?');params.append(start)
     if end: clauses.append('event_date<=?');params.append(end)
     query='SELECT * FROM hub_events'+(' WHERE '+' AND '.join(clauses) if clauses else '')+' ORDER BY event_date,id'
     with db() as c: return jsonify([dict(row) for row in c.execute(query,params)])
@@ -225,20 +229,20 @@ def list_events():
 @app.post('/api/events')
 def add_event():
     values=event_payload(request.get_json(silent=True))
-    if not values: return jsonify(error='Informe data, título e categoria válidos.'),400
-    with db() as c: eid=c.execute('INSERT INTO hub_events(event_date,title,category,description) VALUES(?,?,?,?)',values).lastrowid
+    if not values: return jsonify(error='Informe datas, título e categoria válidos. A data final não pode ser anterior à inicial.'),400
+    with db() as c: eid=c.execute('INSERT INTO hub_events(event_date,title,category,description,end_date) VALUES(?,?,?,?,?)',values).lastrowid
     return jsonify(id=eid),201
 
 @app.put('/api/events/<int:eid>')
 def edit_event(eid):
     data=request.get_json(silent=True); values=event_payload(data)
-    if not values: return jsonify(error='Informe data, título e categoria válidos.'),400
+    if not values: return jsonify(error='Informe datas, título e categoria válidos. A data final não pode ser anterior à inicial.'),400
     with db() as c:
         row=c.execute('SELECT revision,source FROM hub_events WHERE id=?',(eid,)).fetchone()
         if not row: return jsonify(error='Data não encontrada.'),404
         if row['source']!='manual': return jsonify(error='Datas importadas são atualizadas pela planilha. Crie uma data manual para ajustes.'),409
         if data.get('revision')!=row['revision']: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
-        if not c.execute('UPDATE hub_events SET event_date=?,title=?,category=?,description=?,revision=revision+1 WHERE id=? AND revision=?',(*values,eid,data['revision'])).rowcount: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
+        if not c.execute('UPDATE hub_events SET event_date=?,title=?,category=?,description=?,end_date=?,revision=revision+1 WHERE id=? AND revision=?',(*values,eid,data['revision'])).rowcount: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
     return jsonify(ok=True)
 
 @app.delete('/api/events/<int:eid>')

@@ -43,3 +43,5 @@ Execute `python -m unittest -v test_app.py`, `node --test test_schedule.js` e `n
 Repositório de destino: `https://github.com/VikThorSkynet/Hub_Number_One.git`.
 
 Os detalhes de cada dia usam títulos simples (ex.: Semana de provas), sem turma, horário ou siglas, e agrupam eventos importados iguais por categoria/título. Os dados originais permanecem no banco. Eventos manuais continuam separados e editáveis. O resumo Próximos 7 dias mantém S/Q e T/Q, conforme solicitado anteriormente.
+
+Nova data aceita data inicial e final inclusivas. Um período é um único evento manual, editado/excluído por inteiro, e aparece em todos os dias abrangidos. Próximos 7 dias inclui eventos já iniciados que ainda estão em andamento. O banco recebe a coluna opcional `hub_events.end_date` via migração idempotente; valores antigos nulos representam um único dia.
