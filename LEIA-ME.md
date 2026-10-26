@@ -58,3 +58,7 @@ O calendário inicial usa a mesma navegação da página de datas: as setas muda
 O mapa apresenta uma grade por grupo: **S/Q = segunda e quarta**; **T/Q = terça e quinta**. As salas ficam nas linhas e os horários ocupados nas colunas. Clique na turma para editar ou excluir. No celular, deslize a grade horizontalmente. O mapa original está disponível na seção recolhida abaixo das grades.
 
 Nova data aceita data inicial e final inclusivas. Um período é um único evento manual, editado/excluído por inteiro, e aparece em todos os dias abrangidos. Próximos 7 dias inclui eventos já iniciados que ainda estão em andamento. O banco recebe a coluna opcional `hub_events.end_date` via migração idempotente; valores antigos nulos representam um único dia.
+
+### Agenda compartilhada no início
+
+O calendário é o foco da página inicial, com títulos dos eventos nos dias. Clique em um dia para consultar os detalhes sem sair da página e use Novo evento ou Evento neste dia para cadastrar. Os eventos podem ser editados e excluídos nesse mesmo painel. As telas consultam as alterações da equipe a cada 30 segundos e ao retornar à aba; todos devem acessar o mesmo servidor. Próximos 7 dias permanece baseado na data atual.
