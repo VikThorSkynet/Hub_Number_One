@@ -19,7 +19,7 @@
   closeDay.onclick = () => dayDialog.close();
   addDay.onclick = () => {dayDialog.close();document.getElementById('newEvent').click();};
   function showDay() {renderSelected();if(!dayDialog.open)dayDialog.showModal();}
-  function renderCalendar(){document.getElementById('monthLabel').textContent=month.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});grid.replaceChildren();const start=new Date(month.getFullYear(),month.getMonth(),1-month.getDay());const count=Math.ceil((month.getDay()+new Date(month.getFullYear(),month.getMonth()+1,0).getDate())/7)*7;for(let i=0;i<count;i++){const date=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i),day=iso(date),current=schoolSchedule.summarizeDay(events,day);const cell=element('button','day'+(date.getMonth()!==month.getMonth()?' outside':'')+(day===iso(today)?' today':'')+(day===selectedDate?' selected':''));cell.type='button';cell.setAttribute('aria-label',date.toLocaleDateString('pt-BR',{dateStyle:'full'})+(current.length?`, ${current.length} evento(s)`:''));if(day===iso(today))cell.setAttribute('aria-current','date');cell.append(element('span','',date.getDate()));const dots=element('span','event-dots');[...new Set(current.map(event=>event.category))].slice(0,3).forEach(category=>dots.append(element('i','event-dot '+category)));cell.append(dots);if(document.body.dataset.page==='home'){const chips=element('span','calendar-event-labels');current.slice(0,2).forEach(event=>chips.append(element('span','calendar-event-chip '+event.category,event.title)));if(current.length>2)chips.append(element('span','calendar-more','+'+(current.length-2)+' eventos'));cell.append(chips);}cell.onclick=()=>{if(document.getElementById('dateEvents')){selectedDate=day;if(date.getMonth()!==month.getMonth())month=new Date(date.getFullYear(),date.getMonth(),1);renderCalendar();showDay();}else location.href='/calendario?date='+day;};grid.append(cell);}}
+  function renderCalendar(){document.getElementById('monthLabel').textContent=month.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});grid.replaceChildren();const start=new Date(month.getFullYear(),month.getMonth(),1-month.getDay());const count=Math.ceil((month.getDay()+new Date(month.getFullYear(),month.getMonth()+1,0).getDate())/7)*7;for(let i=0;i<count;i++){const date=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i),day=iso(date),current=schoolSchedule.summarizeDay(events,day);const cell=element('button','day'+(date.getMonth()!==month.getMonth()?' outside':'')+(day===iso(today)?' today':'')+(day===selectedDate?' selected':''));cell.type='button';cell.setAttribute('aria-label',date.toLocaleDateString('pt-BR',{dateStyle:'full'})+(current.length?`, ${current.length} evento(s)`:''));if(day===iso(today))cell.setAttribute('aria-current','date');cell.append(element('span','',date.getDate()));const dots=element('span','event-dots');[...new Set(current.map(event=>event.category))].slice(0,3).forEach(category=>dots.append(element('i','event-dot '+category)));cell.append(dots);if(document.body.dataset.page==='home'){const chips=element('span','calendar-event-labels');current.slice(0,2).forEach(event=>chips.append(element('span','calendar-event-chip '+event.category+(event.completed?' is-completed':''),(event.completed?'✓ ':'')+event.title)));if(current.length>2)chips.append(element('span','calendar-more','+'+(current.length-2)+' eventos'));cell.append(chips);}cell.onclick=()=>{if(document.getElementById('dateEvents')){selectedDate=day;if(date.getMonth()!==month.getMonth())month=new Date(date.getFullYear(),date.getMonth(),1);renderCalendar();showDay();}else location.href='/calendario?date='+day;};grid.append(cell);}}
   function renderSelected() {
     const heading = new Date(selectedDate+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
     const sideHeading = document.getElementById('selectedDateHeading');
@@ -31,11 +31,19 @@
       box.replaceChildren();
       if(!rows.length)box.append(element('p','muted','Nenhum evento cadastrado para este dia.'));
       rows.forEach(event=>{
-        const card = element('article','event-item');
+        const card = element('article','event-item'+(event.completed?' is-completed':''));
         card.append(element('span','event-tag '+event.category,labels[event.category]||'Outro'),element('strong','',event.title));
         if(event.end_date&&event.end_date!==event.event_date)card.append(element('span','muted','De '+new Date(event.event_date+'T12:00:00').toLocaleDateString('pt-BR')+' até '+new Date(event.end_date+'T12:00:00').toLocaleDateString('pt-BR')));
         if(event.description){card.append(element('span','observation-label','Observações'),element('p','event-observations',event.description));}
         if(event.source!=='manual')card.append(element('span','muted','Fonte: calendário 2026.2'));
+        const completion = element('button',event.completed?'completion-button':'completion-button primary',event.completed?'✓ Concluído · Reabrir':'Marcar como concluído');
+        completion.type='button';
+        completion.onclick=async()=>{
+          completion.disabled=true;
+          try{await api('/api/events/completion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events:event.completionItems,completed:!event.completed})});await load();}
+          catch(error){const message=element('p','status',error.message);message.setAttribute('role','alert');card.append(message);completion.disabled=false;}
+        };
+        card.append(completion);
         if(event.source==='manual'){
           const actions=element('div','event-actions');const edit=element('button','','Editar'),remove=element('button','danger','Excluir');
           edit.onclick=()=>{dayDialog.close();window.editSchoolEvent?.(event);};
@@ -53,7 +61,7 @@
     const first = iso(today), last = iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 6));
     const rows = schoolSchedule.summarizeUpcoming(events, first, last);
     if (!rows.length) {
-      box.append(element('p', 'muted', 'Nenhuma data importante cadastrada para os próximos 7 dias.'));
+      box.append(element('p', 'muted', 'Nenhum evento pendente para os próximos 7 dias.'));
       return;
     }
     rows.forEach(event => {

@@ -7,7 +7,9 @@
       const imported = event.source === 'calendar-2026-2';
       const title = imported ? simpleTitle(event) : event.title;
       const key = imported ? JSON.stringify([event.category, title]) : `manual:${event.id}`;
-      if (!groups.has(key)) groups.set(key, {...event, title, descriptions: new Set()});
+      if (!groups.has(key)) groups.set(key, {...event, title, completionItems: [], completed:true, descriptions: new Set()});
+      groups.get(key).completionItems.push({id:event.id,revision:event.revision});
+      groups.get(key).completed = groups.get(key).completed && Boolean(event.completed);
       if (event.description) groups.get(key).descriptions.add(event.description);
     }
     return [...groups.values()].map(({descriptions, ...event}) => ({...event, description:[...descriptions].join(' · ')}));
@@ -15,6 +17,7 @@
   function summarizeUpcoming(events, first, last) {
     const groups = new Map();
     for (const event of events) {
+      if(event.completed)continue;
       if ((event.end_date || event.event_date) < first || event.event_date > last) continue;
       const imported = event.source === 'calendar-2026-2';
       const group = /seg\/qua|segunda e quarta/i.test(event.title) ? 'S/Q'

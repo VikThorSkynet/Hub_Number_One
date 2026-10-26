@@ -94,6 +94,20 @@ class NoticeTests(unittest.TestCase):
             self.assertLess(html.index('hub-calendar'),html.index('Ferramentas da equipe'))
 
 class CalendarAndClassTests(unittest.TestCase):
+    def test_event_completion(self):
+        client=app.app.test_client()
+        ids=[client.post('/api/events',json={'event_date':'2027-03-02','title':'Evento de teste','category':'administrativo','description':''}).json['id'] for _ in range(2)]
+        items=[{'id':eid,'revision':1} for eid in ids]
+        self.assertEqual(client.post('/api/events/completion',json={'events':[items[0],{**items[1],'revision':99}],'completed':True}).status_code,409)
+        self.assertTrue(all(not e['completed'] for e in client.get('/api/events').json if e['id'] in ids))
+        self.assertEqual(client.post('/api/events/completion',json={'events':items,'completed':True}).status_code,200)
+        self.assertTrue(all(e['completed'] for e in client.get('/api/events').json if e['id'] in ids))
+        self.assertEqual(client.post('/api/events/completion',json={'events':items,'completed':False}).status_code,409)
+        self.assertEqual(client.post('/api/events/completion',json={'events':[{'id':eid,'revision':2} for eid in ids],'completed':False}).status_code,200)
+        self.assertTrue(all(not e['completed'] for e in client.get('/api/events').json if e['id'] in ids))
+        self.assertEqual(client.post('/api/events/completion',json={'events':items,'completed':'true'}).status_code,400)
+        for eid in ids: client.delete('/api/events/'+str(eid))
+
     def test_event_period(self):
         client=app.app.test_client()
         item={'event_date':'2027-01-30','end_date':'2027-02-03','title':'Semana de provas','category':'prova','description':''}

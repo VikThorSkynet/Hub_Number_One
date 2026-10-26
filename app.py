@@ -66,6 +66,8 @@ def init():
         ''')
         if 'end_date' not in {row['name'] for row in c.execute('PRAGMA table_info(hub_events)')}:
             c.execute('ALTER TABLE hub_events ADD COLUMN end_date TEXT')
+        if 'completed' not in {row['name'] for row in c.execute('PRAGMA table_info(hub_events)')}:
+            c.execute('ALTER TABLE hub_events ADD COLUMN completed INTEGER NOT NULL DEFAULT 0')
 
 def prepare(d):
     out = {k: str(d.get(k, '') or '').strip() for k in ('name','company','title','department','notes','emails')}
@@ -245,6 +247,24 @@ def edit_event(eid):
         if not c.execute('UPDATE hub_events SET event_date=?,title=?,category=?,description=?,end_date=?,revision=revision+1 WHERE id=? AND revision=?',(*values,eid,data['revision'])).rowcount: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
     return jsonify(ok=True)
 
+@app.post('/api/events/completion')
+def complete_events():
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict) or type(data.get('completed')) is not bool or not isinstance(data.get('events'),list) or not 1<=len(data['events'])<=100:
+        return jsonify(error='Informe eventos e situação válidos.'),400
+    items=data['events']
+    if any(not isinstance(item,dict) or type(item.get('id')) is not int or type(item.get('revision')) is not int for item in items) or len({item['id'] for item in items})!=len(items):
+        return jsonify(error='Informe eventos válidos.'),400
+    with db() as c:
+        c.execute('BEGIN IMMEDIATE')
+        for item in items:
+            row=c.execute('SELECT revision FROM hub_events WHERE id=?',(item['id'],)).fetchone()
+            if not row or row['revision']!=item['revision']:
+                return jsonify(error='Um evento foi alterado. Atualize a página e tente novamente.'),409
+        for item in items:
+            c.execute('UPDATE hub_events SET completed=?,revision=revision+1 WHERE id=?',(int(data['completed']),item['id']))
+    return jsonify(ok=True)
+
 @app.delete('/api/events/<int:eid>')
 def delete_event(eid):
     with db() as c:
@@ -297,8 +317,10 @@ def import_events():
     if not rows: return jsonify(error='Nenhuma data importante foi encontrada.'),400
     with db() as c:
         c.execute('BEGIN IMMEDIATE')
+        completed_keys=[row['source_key'] for row in c.execute("SELECT source_key FROM hub_events WHERE source='calendar-2026-2' AND completed=1")]
         c.execute("DELETE FROM hub_events WHERE source='calendar-2026-2'")
         c.executemany("INSERT INTO hub_events(source_key,event_date,title,category,description,source) VALUES(?,?,?,?,?,'calendar-2026-2')",rows)
+        c.executemany('UPDATE hub_events SET completed=1 WHERE source_key=?',[(key,) for key in completed_keys])
     return jsonify(imported=len(rows))
 
 def class_payload(data):

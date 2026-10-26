@@ -51,3 +51,5 @@ A página inicial prioriza a agenda compartilhada: calendário mensal grande com
 A barra lateral tem botão recolher/expandir, com preferência local salva em numberOneSidebarCollapsed. No computador recolhe para ícones; no celular oculta o menu. Clicar em um dia (início ou calendário) ou em Próximos 7 dias abre um dialog com eventos, observações completas e ações. A janela permite adicionar evento no dia selecionado e fecha com Escape ou botão de fechar.
 
 Categorias manuais adicionais: DAA (Departamento de assistência ao aluno), Secretaria, Administrativo e Coordenação. Chaves da API: daa, secretaria, administrativo e coordenacao. Usam azul, coral, roxo e amarelo, respectivamente.
+
+Eventos aceitam concluído/reabrir via /api/events/completion, com atualização em lote atômica e revision por registro. Campo completed adicionado por migração; concluídos permanecem no calendário com marcação e saem dos próximos 7 dias (pendências). Eventos importados agrupados no dia são concluídos juntos; reimportação preserva conclusão por source_key. Um evento manual de período é concluído por inteiro.

@@ -56,3 +56,11 @@ test('periods appear on each inclusive day and are clipped to the upcoming windo
   assert.equal(summarizeDay(events, '2027-02-05').length, 0);
   assert.deepEqual(summarizeUpcoming(events, '2027-02-01', '2027-02-03')[0].dates, ['2027-02-01','2027-02-02','2027-02-03']);
 });
+
+test('completed events stay in daily details and leave upcoming pending events', () => {
+  const event = {id:91,revision:2,event_date:'2027-02-01',source:'manual',title:'Reunião',category:'administrativo',completed:1};
+  const day=summarizeDay([event],event.event_date);
+  assert.equal(day[0].completed,true);
+  assert.deepEqual(day[0].completionItems,[{id:91,revision:2}]);
+  assert.deepEqual(summarizeUpcoming([event],'2027-02-01','2027-02-07'),[]);
+});
