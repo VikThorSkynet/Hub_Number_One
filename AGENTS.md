@@ -53,3 +53,5 @@ A barra lateral tem botão recolher/expandir, com preferência local salva em nu
 Categorias manuais adicionais: DAA (Departamento de assistência ao aluno), Secretaria, Administrativo e Coordenação. Chaves da API: daa, secretaria, administrativo e coordenacao. Usam azul, coral, roxo e amarelo, respectivamente.
 
 Eventos aceitam concluído/reabrir via /api/events/completion, com atualização em lote atômica e revision por registro. Campo completed adicionado por migração; concluídos permanecem no calendário com marcação e saem dos próximos 7 dias (pendências). Eventos importados agrupados no dia são concluídos juntos; reimportação preserva conclusão por source_key. Um evento manual de período é concluído por inteiro.
+
+A janela de eventos do dia tem largura de até 1000px e altura de 90vh (92dvh no celular), com cabeçalho e ações fixos e rolagem apenas na lista de eventos.
