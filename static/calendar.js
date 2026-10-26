@@ -5,7 +5,7 @@
   let selectedDate=/^\d{4}-\d{2}-\d{2}$/.test(selected||'')?selected:iso(today);
   if(selected&&selectedDate===selected){const parts=selected.split('-').map(Number);month=new Date(parts[0],parts[1]-1,1);}
   let events=[];
-  const labels={prova:'Provas',notas:'Notas e boletins',feriado:'Feriado ou recesso',aulas:'Aulas',segunda_chamada:'2ª chamada',projeto:'Projetos',sexta_letiva:'Sexta letiva',encerramento:'Encerramento',outro:'Outro'};
+  const labels={prova:'Provas',notas:'Notas e boletins',feriado:'Feriado ou recesso',aulas:'Aulas',segunda_chamada:'2ª chamada',projeto:'Projetos',sexta_letiva:'Sexta letiva',encerramento:'Encerramento',outro:'Outro',daa:'DAA',secretaria:'Secretaria',administrativo:'Administrativo',coordenacao:'Coordenação'};
   const grid=document.getElementById('calendarDays');
   const dayDialog = element('dialog', 'day-events-dialog');
   dayDialog.setAttribute('aria-labelledby', 'dayDialogTitle');

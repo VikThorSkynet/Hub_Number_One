@@ -49,3 +49,5 @@ Nova data aceita data inicial e final inclusivas. Um período é um único event
 A página inicial prioriza a agenda compartilhada: calendário mensal grande com títulos nos dias, próximos 7 dias e detalhes do dia selecionado. Criação/edição/exclusão de eventos manuais são acessíveis no próprio início via formulário compartilhado. Eventos são recarregados a cada 30 segundos e ao retornar à aba; todos usam o mesmo banco no servidor. Avisos permanecem acima em faixa compacta e ferramentas abaixo da agenda.
 
 A barra lateral tem botão recolher/expandir, com preferência local salva em numberOneSidebarCollapsed. No computador recolhe para ícones; no celular oculta o menu. Clicar em um dia (início ou calendário) ou em Próximos 7 dias abre um dialog com eventos, observações completas e ações. A janela permite adicionar evento no dia selecionado e fecha com Escape ou botão de fechar.
+
+Categorias manuais adicionais: DAA (Departamento de assistência ao aluno), Secretaria, Administrativo e Coordenação. Chaves da API: daa, secretaria, administrativo e coordenacao. Usam azul, coral, roxo e amarelo, respectivamente.

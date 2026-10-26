@@ -190,7 +190,7 @@ def calendar_page(): return send_from_directory(app.static_folder,'calendario.ht
 @app.get('/mapa-de-turmas')
 def classes_page(): return send_from_directory(app.static_folder,'turmas.html')
 
-EVENT_CATEGORIES = {'prova','notas','feriado','aulas','segunda_chamada','projeto','sexta_letiva','encerramento','outro'}
+EVENT_CATEGORIES = {'prova','notas','feriado','aulas','segunda_chamada','projeto','sexta_letiva','encerramento','outro','daa','secretaria','administrativo','coordenacao'}
 SHEET_COLORS = {
     'FFCCFFFF': ('prova','Semana de provas'),
     'FFFFFF9B': ('notas','Envio de notas e boletins'),
