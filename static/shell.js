@@ -4,8 +4,24 @@ icons.classes='<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h2
 icons.notice='<path d="M4 10v5h4l10 5V5L8 10zM8 15l2 6h3"/>';
 function icon(name){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name]}</svg>`;}
 const current=document.body.dataset.page;
-document.getElementById('sidebar').innerHTML=`<a href="/" aria-label="Number One — Início"><img class="logo" src="/static/number-one.svg" alt="Number One — Inglês Completo"></a><div class="unit">LAGOA SANTA</div><div class="nav-label">ESPAÇO DA EQUIPE</div><nav aria-label="Navegação principal">${[['home','/','Início'],['phone','/lista-telefonica','Lista telefônica'],['calc','/calculadora','Calculadora de multa'],['link','/links','Links úteis'],['calendar','/calendario','Datas importantes'],['classes','/mapa-de-turmas','Mapa de turmas'],['notice','/avisos','Avisos da escola']].map(([key,url,label])=>`<a href="${url}" ${key===current?'class="active" aria-current="page"':''}>${icon(key)}${label}</a>`).join('')}</nav><div class="sidebar-footer">Uma equipe. Muitas conexões.<br><b>Let’s move forward, together.</b></div>`;
+document.getElementById('sidebar').innerHTML=`<button id="sidebarToggle" class="sidebar-toggle" type="button" aria-controls="sidebarNavigation" aria-expanded="true" aria-label="Recolher menu" title="Recolher menu">‹</button><a class="sidebar-brand" href="/" aria-label="Number One — Início"><img class="logo" src="/static/number-one.svg" alt="Number One — Inglês Completo"></a><div class="unit">LAGOA SANTA</div><div class="nav-label">ESPAÇO DA EQUIPE</div><nav id="sidebarNavigation" aria-label="Navegação principal">${[['home','/','Início'],['phone','/lista-telefonica','Lista telefônica'],['calc','/calculadora','Calculadora de multa'],['link','/links','Links úteis'],['calendar','/calendario','Datas importantes'],['classes','/mapa-de-turmas','Mapa de turmas'],['notice','/avisos','Avisos da escola']].map(([key,url,label])=>`<a href="${url}" title="${label}" aria-label="${label}" ${key===current?'class="active" aria-current="page"':''}>${icon(key)}<span class="nav-text">${label}</span></a>`).join('')}</nav><div class="sidebar-footer">Uma equipe. Muitas conexões.<br><b>Let’s move forward, together.</b></div>`;
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
 const dateLabel=document.getElementById('currentDate');if(dateLabel)dateLabel.textContent=new Date().toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
 async function api(url,options={}){const response=await fetch(url,options);if(!response.ok){let message='Não foi possível concluir. Tente novamente.';try{message=(await response.json()).error||message;}catch{}throw new Error(message);}return response.json();}
 function element(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;}
+
+const sidebarToggle = document.getElementById('sidebarToggle');
+function setSidebarCollapsed(collapsed) {
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+  const label = collapsed ? 'Expandir menu' : 'Recolher menu';
+  sidebarToggle.setAttribute('aria-label', label);
+  sidebarToggle.title = label;
+  sidebarToggle.textContent = collapsed ? '›' : '‹';
+}
+try { setSidebarCollapsed(localStorage.getItem('numberOneSidebarCollapsed') === 'true'); } catch {}
+sidebarToggle.onclick = () => {
+  const collapsed = !document.body.classList.contains('sidebar-collapsed');
+  setSidebarCollapsed(collapsed);
+  try { localStorage.setItem('numberOneSidebarCollapsed', String(collapsed)); } catch {}
+};
