@@ -57,3 +57,5 @@ Eventos aceitam concluído/reabrir via /api/events/completion, com atualização
 A janela de eventos do dia tem largura de até 1000px e altura de 90vh (92dvh no celular), com cabeçalho e ações fixos e rolagem apenas na lista de eventos.
 
 No início, o calendário ocupa toda a largura. Próximos 7 dias e detalhes do dia ficam abaixo, lado a lado no computador, com textos maiores; no celular são empilhados. Essa disposição substitui a antiga coluna lateral estreita.
+
+A barra lateral fixa tem rolagem vertical independente no computador para manter todos os links acessíveis em janelas baixas; seus elementos não encolhem e a rolagem não é propagada para o conteúdo ao atingir o limite.
