@@ -94,6 +94,41 @@ class NoticeTests(unittest.TestCase):
             self.assertLess(html.index('hub-calendar'),html.index('Ferramentas da equipe'))
 
 class CalendarAndClassTests(unittest.TestCase):
+    def test_recurring_events_and_metadata(self):
+        client=app.app.test_client()
+        item={'event_date':'2028-01-31','end_date':'2028-02-01','title':'Reunião mensal','category':'outro','description':'Pauta','assignee':'Pessoa de teste','department':'secretaria','location':'Sala A','start_time':'10:00','end_time':'11:00','recurrence':'monthly','recurrence_until':'2028-03-31'}
+        result=client.post('/api/events',json=item)
+        self.assertEqual(result.status_code,201)
+        self.assertEqual(result.json['created'],3)
+        rows=[e for e in client.get('/api/events').json if e['title']==item['title']]
+        self.assertEqual([e['event_date'] for e in rows],['2028-01-31','2028-02-29','2028-03-31'])
+        self.assertEqual([e['end_date'] for e in rows],['2028-02-01','2028-03-01','2028-04-01'])
+        self.assertEqual(len({e['series_id'] for e in rows}),1)
+        self.assertTrue(rows[0]['series_id'])
+        for row in rows:
+            self.assertEqual(row['assignee'],item['assignee'])
+            self.assertEqual(row['location'],'Sala A')
+        first=rows[0]
+        self.assertEqual(client.put('/api/events/'+str(first['id']),json={**first,'assignee':'Outra pessoa','start_time':'09:00'}).status_code,200)
+        self.assertEqual(client.post('/api/events/completion',json={'events':[{'id':first['id'],'revision':2}],'completed':True}).status_code,200)
+        fresh={e['id']:e for e in client.get('/api/events').json}
+        self.assertEqual(fresh[first['id']]['completed'],1)
+        self.assertEqual(fresh[rows[1]['id']]['completed'],0)
+        self.assertEqual(fresh[rows[1]['id']]['assignee'],item['assignee'])
+        for row in rows: client.delete('/api/events/'+str(row['id']))
+
+    def test_recurrence_and_time_validation(self):
+        client=app.app.test_client()
+        item={'event_date':'2027-04-01','title':'Rotina semanal','category':'administrativo','description':'','recurrence':'weekly','recurrence_until':'2027-04-15'}
+        response=client.post('/api/events',json=item)
+        self.assertEqual(response.json['created'],3)
+        rows=[e for e in client.get('/api/events').json if e['title']==item['title']]
+        self.assertEqual([e['event_date'] for e in rows],['2027-04-01','2027-04-08','2027-04-15'])
+        for changes in [{'recurrence_until':''},{'recurrence_until':'2035-04-01'},{'recurrence':'bad'},{'start_time':'25:00'},{'start_time':'15:00','end_time':'14:00'},{'department':'bad'},{'assignee':7}]:
+            self.assertEqual(client.post('/api/events',json={**item,**changes}).status_code,400,changes)
+        self.assertEqual(len([e for e in client.get('/api/events').json if e['title']==item['title']]),3)
+        for row in rows: client.delete('/api/events/'+str(row['id']))
+
     def test_event_completion(self):
         client=app.app.test_client()
         ids=[client.post('/api/events',json={'event_date':'2027-03-02','title':'Evento de teste','category':'administrativo','description':''}).json['id'] for _ in range(2)]

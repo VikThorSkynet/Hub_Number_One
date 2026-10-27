@@ -59,3 +59,11 @@ A janela de eventos do dia tem largura de até 1000px e altura de 90vh (92dvh no
 No início, o calendário ocupa toda a largura. Próximos 7 dias e detalhes do dia ficam abaixo, lado a lado no computador, com textos maiores; no celular são empilhados. Essa disposição substitui a antiga coluna lateral estreita.
 
 A barra lateral fixa tem rolagem vertical independente no computador para manter todos os links acessíveis em janelas baixas; seus elementos não encolhem e a rolagem não é propagada para o conteúdo ao atingir o limite.
+
+O calendário compartilhado oferece Mês, Semana (domingo a sábado) e Lista (mês selecionado), com filtros combinados por categoria, setor, responsável, situação e texto. Os filtros também afetam os detalhes e Próximos 7 dias. Os contadores Hoje/Atrasados ignoram apenas o filtro situação e abrem as respectivas pendências. Atrasado significa pendente após end_date, ou após end_time/start_time no último dia quando existe horário. Usa data/hora local do navegador. Eventos de período e importados iguais em dias consecutivos usam faixas contínuas sem misturar eventos manuais distintos.
+
+Migrações idempotentes adicionam assignee, department, location, start_time, end_time, series_id, recurrence e recurrence_until a hub_events (TEXT NOT NULL DEFAULT ''). Categoria e setor são independentes; eventDepartment reconhece categorias de setor legadas quando department está vazio. Horário final exige inicial e não pode ser anterior em evento de um só dia.
+
+POST /api/events gera recorrências weekly/monthly atomicamente, até 1096 dias e 250 ocorrências. recurrence_until limita o início da última ocorrência, inclusivamente; a duração original é preservada. Repetição mensal ancora no dia original e limita ao último dia do mês, sem desviar o dia das ocorrências posteriores. Cada ocorrência tem id/revision próprios e series_id comum. PUT, conclusão e DELETE atuam somente na ocorrência escolhida; não existe edição/exclusão em série. A interface oculta recorrência na edição e explica essa regra. Testes usam somente dados temporários.
+
+O polling de eventos (30 segundos e retorno à aba) pausa com qualquer dialog aberto para não interromper formulários ou ações; salvar/concluir ainda força atualização. Versões de CSS/JS são incrementadas nos HTMLs quando mudam.

@@ -45,7 +45,7 @@ O hub alterna entre as boas-vindas e os avisos em ordem de criação. As telas a
 
 ## Datas importantes e mapa de turmas
 
-O hub mostra o calendário e **Próximos 7 dias** lado a lado em telas maiores; em celular aparecem um abaixo do outro. Os próximos dias incluem hoje e os seis dias seguintes. Clique num dia para abrir `/calendario`, conferir detalhes, criar eventos manuais e, se necessário, atualizar as datas importadas com o arquivo XLSX do calendário 2026.2.
+O hub mostra o calendário em toda a largura, com **Próximos 7 dias** e os detalhes do dia abaixo. No celular, os painéis são empilhados. Os próximos dias incluem hoje e os seis dias seguintes. Clique num dia para abrir a janela de detalhes e criar eventos manuais. Em `/calendario`, também é possível importar o arquivo XLSX do calendário 2026.2.
 
 A importação lê as três abas e as cores da legenda. Cada turma/aba permanece identificada, distinguindo segunda e quarta de terça e quinta. A nova importação substitui somente eventos dessa planilha; os eventos criados manualmente permanecem. As datas de encerramento de 15/12 (terça/quinta) e 16/12 (segunda/quarta) vêm das observações do arquivo. Eventos comemorativos citados sem dia específico na legenda não são inventados. A planilha original permanece no Drive e o servidor não sincroniza automaticamente com ela; para atualizar, baixe a versão XLSX e use o botão de importação.
 
@@ -62,3 +62,14 @@ Nova data aceita data inicial e final inclusivas. Um período é um único event
 ### Agenda compartilhada no início
 
 O calendário é o foco da página inicial, com títulos dos eventos nos dias. Clique em um dia para consultar os detalhes sem sair da página e use Novo evento ou Evento neste dia para cadastrar. Os eventos podem ser editados e excluídos nesse mesmo painel. As telas consultam as alterações da equipe a cada 30 segundos e ao retornar à aba; todos devem acessar o mesmo servidor. Próximos 7 dias permanece baseado na data atual.
+
+### Organização dos eventos
+
+- Alterne entre **Mês**, **Semana** e **Lista**. A lista mostra os eventos do mês selecionado; as setas acompanham a visualização escolhida. Eventos de vários dias aparecem em faixas contínuas, divididas apenas nas viradas de semana.
+- Combine filtros por setor, categoria, responsável e situação, ou busque por título, observação, responsável e local. Os mesmos filtros se aplicam aos detalhes e aos próximos sete dias. Use **Limpar filtros** para voltar a todos os eventos.
+- **Hoje** e **Atrasados** mostram pendências e abrem seus detalhes. Os contadores respeitam setor, categoria, responsável e busca, independentemente do filtro Situação. Um evento fica atrasado após sua data final ou, se informado, após o horário final (ou inicial quando não há horário final). Datas e horários seguem o relógio do computador que abre o hub.
+- No cadastro, informe opcionalmente responsável, setor, horário e local. Categoria indica o tipo do evento; setor indica a equipe responsável. Os setores antigos cadastrados como categoria continuam sendo reconhecidos pelos filtros.
+- Para repetir, escolha **Toda semana** ou **Todo mês** e informe **Repetir até**. Essa data limita o início da última ocorrência; o período completo de cada ocorrência é mantido. A repetição mensal conserva o dia original e usa o último dia disponível nos meses menores (31/01 → 28/02 → 31/03 em ano não bissexto).
+- Cada ocorrência pode ser editada, concluída, reaberta ou excluída individualmente. Editar uma ocorrência não muda as seguintes. O cadastro aceita até três anos de repetição e 250 ocorrências por vez.
+
+A consulta automática pausa enquanto uma janela de detalhes ou edição está aberta, para preservar a interação. Ao salvar ou concluir, a tela recarrega os dados imediatamente. Eventos concluídos permanecem no calendário e saem das pendências.

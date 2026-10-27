@@ -6,7 +6,9 @@ import re
 import sqlite3
 import unicodedata
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from calendar import monthrange
+from uuid import uuid4
 from urllib.parse import urlsplit
 from flask import Flask, request, jsonify, send_from_directory, abort, send_file
 from openpyxl import load_workbook
@@ -68,6 +70,11 @@ def init():
             c.execute('ALTER TABLE hub_events ADD COLUMN end_date TEXT')
         if 'completed' not in {row['name'] for row in c.execute('PRAGMA table_info(hub_events)')}:
             c.execute('ALTER TABLE hub_events ADD COLUMN completed INTEGER NOT NULL DEFAULT 0')
+        columns={row['name'] for row in c.execute('PRAGMA table_info(hub_events)')}
+        for column in ('assignee','department','location','start_time','end_time','series_id','recurrence','recurrence_until'):
+            if column not in columns:
+                c.execute(f"ALTER TABLE hub_events ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+
 
 def prepare(d):
     out = {k: str(d.get(k, '') or '').strip() for k in ('name','company','title','department','notes','emails')}
@@ -216,7 +223,16 @@ def event_payload(data):
     if not valid_date(event_date) or not isinstance(title,str) or not 1<=len(title.strip())<=120 or not isinstance(category,str) or category not in EVENT_CATEGORIES or not isinstance(description,str) or len(description)>500: return None
     end_date=data.get('end_date') or event_date
     if not valid_date(end_date) or end_date<event_date: return None
-    return event_date,title.strip(),category,description.strip(),end_date
+    extra=[]
+    for key,limit in [('assignee',80),('department',30),('location',160),('start_time',5),('end_time',5)]:
+        value=data.get(key,'')
+        if not isinstance(value,str) or len(value)>limit: return None
+        extra.append(value.strip())
+    assignee,department,location,start_time,end_time=extra
+    if department not in ('','daa','secretaria','administrativo','coordenacao'): return None
+    if any(value and not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d',value) for value in (start_time,end_time)): return None
+    if end_time and not start_time or event_date==end_date and end_time and end_time<start_time: return None
+    return event_date,title.strip(),category,description.strip(),end_date,*extra
 
 @app.get('/api/events')
 def list_events():
@@ -228,23 +244,52 @@ def list_events():
     query='SELECT * FROM hub_events'+(' WHERE '+' AND '.join(clauses) if clauses else '')+' ORDER BY event_date,id'
     with db() as c: return jsonify([dict(row) for row in c.execute(query,params)])
 
+def event_occurrences(values, data):
+    mode=data.get('recurrence','')
+    if mode not in ('','weekly','monthly'): raise ValueError('Selecione uma repetição válida.')
+    if not mode: return [values]
+    until=data.get('recurrence_until')
+    if not valid_date(until) or until<values[0]: raise ValueError('Informe até quando o evento deve se repetir.')
+    first=date.fromisoformat(values[0]); last=date.fromisoformat(until)
+    if (last-first).days>1096: raise ValueError('A repetição pode abranger até três anos.')
+    duration=date.fromisoformat(values[4])-first
+    result=[]
+    for index in range(251):
+        if mode=='weekly': current=first+timedelta(days=7*index)
+        else:
+            total=first.year*12+first.month-1+index
+            year,month=divmod(total,12); month+=1
+            if year>9999: break
+            current=date(year,month,min(first.day,monthrange(year,month)[1]))
+        if current>last: break
+        if len(result)==250: raise ValueError('Limite de 250 ocorrências por cadastro.')
+        end=current+duration
+        result.append((current.isoformat(),*values[1:4],end.isoformat(),*values[5:]))
+    return result
+
 @app.post('/api/events')
 def add_event():
-    values=event_payload(request.get_json(silent=True))
-    if not values: return jsonify(error='Informe datas, título e categoria válidos. A data final não pode ser anterior à inicial.'),400
-    with db() as c: eid=c.execute('INSERT INTO hub_events(event_date,title,category,description,end_date) VALUES(?,?,?,?,?)',values).lastrowid
-    return jsonify(id=eid),201
+    data=request.get_json(silent=True); values=event_payload(data)
+    if not values: return jsonify(error='Confira datas, horários, título e categoria. O fim deve ser posterior ao início.'),400
+    try: occurrences=event_occurrences(values,data)
+    except (ValueError,OverflowError) as error: return jsonify(error=str(error) or 'Período inválido.'),400
+    mode=data.get('recurrence',''); series_id=uuid4().hex if mode else ''
+    ids=[]
+    with db() as c:
+        for item in occurrences:
+            ids.append(c.execute('INSERT INTO hub_events(event_date,title,category,description,end_date,assignee,department,location,start_time,end_time,series_id,recurrence,recurrence_until) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',(*item,series_id,mode,data.get('recurrence_until','') if mode else '')).lastrowid)
+    return jsonify(id=ids[0],created=len(ids)),201
 
 @app.put('/api/events/<int:eid>')
 def edit_event(eid):
     data=request.get_json(silent=True); values=event_payload(data)
-    if not values: return jsonify(error='Informe datas, título e categoria válidos. A data final não pode ser anterior à inicial.'),400
+    if not values: return jsonify(error='Confira datas, horários, título e categoria. O fim deve ser posterior ao início.'),400
     with db() as c:
         row=c.execute('SELECT revision,source FROM hub_events WHERE id=?',(eid,)).fetchone()
         if not row: return jsonify(error='Data não encontrada.'),404
         if row['source']!='manual': return jsonify(error='Datas importadas são atualizadas pela planilha. Crie uma data manual para ajustes.'),409
         if data.get('revision')!=row['revision']: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
-        if not c.execute('UPDATE hub_events SET event_date=?,title=?,category=?,description=?,end_date=?,revision=revision+1 WHERE id=? AND revision=?',(*values,eid,data['revision'])).rowcount: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
+        if not c.execute('UPDATE hub_events SET event_date=?,title=?,category=?,description=?,end_date=?,assignee=?,department=?,location=?,start_time=?,end_time=?,revision=revision+1 WHERE id=? AND revision=?',(*values,eid,data['revision'])).rowcount: return jsonify(error='Esta data foi alterada. Atualize a página.'),409
     return jsonify(ok=True)
 
 @app.post('/api/events/completion')
