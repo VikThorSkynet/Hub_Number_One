@@ -1,5 +1,23 @@
 # Hub Number One Lagoa Santa
 
+## Backup diário automático
+
+Execute `configurar-backup.ps1` no computador que guarda o banco, com a mesma conta do servidor. Ele cadastra a tarefa Windows **Number One - Backup diario** para 18h e ao entrar no Windows, criando no máximo um ZIP por dia. O usuário precisa estar conectado ao Windows; se o computador estiver desligado, o próximo início disponível recupera a execução. A tarefa independe de o site estar aberto. São mantidos os 30 arquivos diários mais recentes em `%LOCALAPPDATA%\AgendaTelefonica\backups-diarios` (ou no diretório definido por `AGENDA_DATA`). O backup manual existente continua separado.
+
+Para enviar à pasta indicada no Google Drive, instale e conecte o Google Drive para computador e localize **essa mesma pasta** no Explorador. Informe o caminho local, por exemplo:
+
+```powershell
+.\configurar-backup.ps1 -PastaDrive 'G:\Meu Drive\Backups Number One'
+```
+
+O caminho é apenas um exemplo: ele deve corresponder à pasta https://drive.google.com/drive/folders/1H5Y6Uw42oq98pgJF8AdovdeMPzVk1LKf e não a uma pasta nova com nome parecido. O link web sozinho não conecta o servidor ao Google. Se o banco usa outra pasta, acrescente `-PastaDados 'C:\AgendaNumberOne\dados'`.
+
+Os ZIPs incluem uma cópia consistente do banco inteiro, a imagem do mapa (se existir) e instruções de restauração. A retenção remove somente arquivos `number-one-diario-AAAA-MM-DD.zip`, tanto no destino local como na pasta sincronizada. As exclusões nessa pasta são sincronizadas pelo Google Drive. Outros arquivos e backups manuais são preservados. A confirmação de cópia local não confirma o envio à nuvem: consulte o status do Drive para computador. Sem conexão, os backups locais continuam disponíveis e as cópias retidas são recuperadas na próxima execução com a pasta acessível.
+
+Configuração e log ficam fora do Git, na pasta local de dados: `backup-config.json` e `backup-diario.log`. Para executar agora: `python backup_daily.py`. Para consultar a tarefa: `Get-ScheduledTask -TaskName 'Number One - Backup diario' | Get-ScheduledTaskInfo`. Para restaurar, pare o servidor, preserve os dados atuais e extraia o ZIP na pasta local do banco antes de reiniciar.
+
+O instalador copia o script para a pasta de dados para funcionar sem a pasta compartilhada disponível. Execute-o novamente após atualizar esse script. Configure a pasta do Drive com acesso **Restrito**, somente para as pessoas autorizadas da escola, pois o banco contém contatos. Em instalações iniciadas por aplicativos que redirecionam AppData, informe em `-PastaDados` o caminho físico usado pelo servidor; confira os argumentos da tarefa instalada para preservá-lo ao reconfigurar.
+
 O projeto fica nesta pasta compartilhada. Execute **iniciar.ps1** com PowerShell em um único computador Windows com Python 3.11 ou superior. O computador precisa permanecer ligado. Na primeira execução as dependências são instaladas pela internet.
 
 Acesse http://localhost:4050 nesse computador. Nos outros computadores, use http://NOME-DO-COMPUTADOR:4050. Se a rede bloquear o acesso, o administrador deve liberar a porta TCP 4050 para a rede interna. Não execute uma instância em cada computador: todas as pessoas acessam o mesmo endereço pelo navegador.

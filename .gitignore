@@ -6,3 +6,5 @@ contacts.csv
 .env
 .env.*
 *.log
+backup-config.json
+backups-diarios/
