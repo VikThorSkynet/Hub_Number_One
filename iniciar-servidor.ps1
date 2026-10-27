@@ -9,7 +9,8 @@ New-Item -ItemType Directory -Force -Path $dataPath, $logPath | Out-Null
 $env:AGENDA_DATA = $dataPath
 $env:AGENDA_PORT = '4050'
 Set-Location -LiteralPath $projectPath
-$pythonPath = if (Test-Path 'C:\Python314\python.exe') { 'C:\Python314\python.exe' } else { 'python' }
+$pythonPath = 'C:\AgendaNumberOne\.venv\Scripts\python.exe'
+if (-not (Test-Path -LiteralPath $pythonPath)) { throw 'Execute configurar-servidor-remoto.ps1 para instalar o ambiente Python.' }
 
 & $pythonPath -c "import flask, openpyxl, waitress" 2>$null
 if ($LASTEXITCODE -ne 0) {
@@ -18,3 +19,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 & $pythonPath app.py *>> (Join-Path $logPath 'agenda.log')
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

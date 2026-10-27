@@ -8,3 +8,4 @@ contacts.csv
 *.log
 backup-config.json
 backups-diarios/
+migracao/

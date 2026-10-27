@@ -11,7 +11,7 @@ $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -Re
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description 'Servidor da Agenda Number One' -Force | Out-Null
 
-Get-NetFirewallRule -DisplayName 'Agenda Number One (porta 8080)' -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
-New-NetFirewallRule -DisplayName 'Agenda Number One (porta 4050)' -Direction Inbound -Protocol TCP -LocalPort 4050 -Action Allow -ErrorAction SilentlyContinue | Out-Null
+Get-NetFirewallRule -DisplayName 'Agenda Number One (porta 4050)' -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
+New-NetFirewallRule -DisplayName 'Agenda Number One (porta 4050)' -Direction Inbound -Protocol TCP -LocalPort 4050 -Action Allow -Profile Domain,Private -RemoteAddress LocalSubnet | Out-Null
 Start-ScheduledTask -TaskName $taskName
 Write-Host "Agenda configurada. Use http://$env:COMPUTERNAME`:4050"

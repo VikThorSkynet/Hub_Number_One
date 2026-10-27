@@ -1,5 +1,9 @@
 # Hub Number One Lagoa Santa
 
+## Instalar no servidor da escola
+
+O destino definitivo será o PC servidor da escola, com o nome interno **hubadm** e endereço `http://hubadm:4050/`. Os scripts de instalação, transferência de dados e configuração do nome estão preparados; ainda será necessário executá-los no servidor pela sessão AnyDesk e testar o acesso pela rede. Siga `GUIA-PARA-RODAR-NO-SERVIDOR.md`. O instalador local é `configurar-servidor-remoto.ps1`; a migração usa `preparar_migracao.py` e `restaurar_migracao.py`. O endereço requer DNS interno ou `configurar-endereco.ps1` nos clientes.
+
 ## Backup diário automático
 
 Execute `configurar-backup.ps1` no computador que guarda o banco, com a mesma conta do servidor. Ele cadastra a tarefa Windows **Number One - Backup diario** para 18h e ao entrar no Windows, criando no máximo um ZIP por dia. O usuário precisa estar conectado ao Windows; se o computador estiver desligado, o próximo início disponível recupera a execução. A tarefa independe de o site estar aberto. São mantidos os 30 arquivos diários mais recentes em `%LOCALAPPDATA%\AgendaTelefonica\backups-diarios` (ou no diretório definido por `AGENDA_DATA`). O backup manual existente continua separado.

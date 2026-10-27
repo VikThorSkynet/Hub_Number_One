@@ -86,16 +86,19 @@ def run_backup(data, drive=None, today=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=Path, default=Path(os.environ.get('AGENDA_DATA', str(Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'AgendaTelefonica'))))
+    parser.add_argument('--drive-folder', type=Path)
+    parser.add_argument('--local-only', action='store_true')
     args = parser.parse_args()
     args.data.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(filename=args.data / 'backup-diario.log', level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     config_path = args.data / 'backup-config.json'
     try:
         config = json.loads(config_path.read_text(encoding='utf-8-sig')) if config_path.exists() else {}
-        result = run_backup(args.data, config.get('drive_folder'))
-        logging.info('Backup local pronto: %s. Destino sincronizado: %s', result, config.get('drive_folder') or 'não configurado')
+        drive = None if args.local_only else (args.drive_folder or config.get('drive_folder'))
+        result = run_backup(args.data, drive)
+        logging.info('Backup local pronto: %s. Destino sincronizado: %s', result, drive or 'não configurado')
         print(f'Backup local pronto: {result}')
-        print('Cópia na pasta sincronizada pronta; o envio depende do Google Drive para computador.' if config.get('drive_folder') else 'Google Drive ainda não configurado. Execute configurar-backup.ps1 com -PastaDrive.')
+        print('Cópia na pasta sincronizada pronta; o envio depende do Google Drive para computador.' if drive else 'Backup local; Google Drive não usado nesta execução.')
     except Exception:
         logging.exception('Falha no backup diário')
         raise
