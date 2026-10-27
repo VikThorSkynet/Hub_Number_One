@@ -31,6 +31,11 @@
   const clear=button('Limpar filtros','',()=>{Object.keys(filters).forEach(key=>filters[key]='');filterBar.querySelectorAll('select,input').forEach(control=>control.value='');renderAll();});toolbar.append(clear);
   $('monthLabel').before(toolbar,filterBar);
   const overview=element('div','calendar-overview');filterBar.after(overview);
+  const periodHeader=element('div','calendar-period-header');
+  $('monthLabel').before(periodHeader);
+  periodHeader.append($('monthLabel'),$('previousMonth').parentElement);
+  $('monthLabel').setAttribute('role','heading');$('monthLabel').setAttribute('aria-level','3');
+  $('today').title='Voltar para a data de hoje';
   const dayDialog=element('dialog','day-events-dialog');dayDialog.setAttribute('aria-labelledby','dayDialogTitle');
   const dayHeading=element('h2');dayHeading.id='dayDialogTitle';
   const closeDay=button('×','',()=>dayDialog.close());closeDay.setAttribute('aria-label','Fechar eventos do dia');
@@ -55,7 +60,9 @@
   }
   function renderCalendar(){
     const rows=filtered(),[first,last]=period();
-    $('monthLabel').textContent=view==='week'?`${shortDate(first)} a ${shortDate(last)} · ${dateOf(last).getFullYear()}`:anchor.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const periodName=view==='week'?`${shortDate(first)} a ${shortDate(last)}`:anchor.toLocaleDateString('pt-BR',{month:'long'});
+    const periodYear=view==='week'&&dateOf(first).getFullYear()!==dateOf(last).getFullYear()?`${dateOf(first).getFullYear()} / ${dateOf(last).getFullYear()}`:String(view==='week'?dateOf(last).getFullYear():anchor.getFullYear());
+    $('monthLabel').replaceChildren(element('span','calendar-month-name',periodName),element('span','calendar-year',periodYear));
     viewButtons.querySelectorAll('button').forEach(b=>{b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-pressed',String(b.dataset.view===view));});
     $('previousMonth').setAttribute('aria-label',view==='week'?'Semana anterior':'Mês anterior');$('nextMonth').setAttribute('aria-label',view==='week'?'Próxima semana':'Próximo mês');
     grid.classList.add('team-calendar');grid.dataset.view=view;grid.replaceChildren();weekdayRow.classList.toggle('hidden',view==='list');
