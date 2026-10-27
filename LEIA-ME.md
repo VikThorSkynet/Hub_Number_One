@@ -2,7 +2,7 @@
 
 ## Instalar no servidor da escola
 
-O destino definitivo será o PC servidor da escola, com o nome interno **hubadm** e endereço `http://hubadm:4050/`. Os scripts de instalação, transferência de dados e configuração do nome estão preparados; ainda será necessário executá-los no servidor pela sessão AnyDesk e testar o acesso pela rede. Siga `GUIA-PARA-RODAR-NO-SERVIDOR.md`. O instalador local é `configurar-servidor-remoto.ps1`; a migração usa `preparar_migracao.py` e `restaurar_migracao.py`. O endereço requer DNS interno ou `configurar-endereco.ps1` nos clientes.
+O destino definitivo será o PC servidor da escola, com o nome interno **hubadm** e endereço `http://hubadm:4050/`. A instalação foi feita no SERVIDOR em 27/10/2026 e testada de outro computador em http://servidor:4050/. O nome hubadm ainda depende de DNS/hosts nos clientes; o Drive depende de login da escola e configuração da pasta. Siga `GUIA-PARA-RODAR-NO-SERVIDOR.md`. O instalador local é `configurar-servidor-remoto.ps1`; a migração usa `preparar_migracao.py` e `restaurar_migracao.py`. O endereço requer DNS interno ou `configurar-endereco.ps1` nos clientes.
 
 ## Backup diário automático
 
